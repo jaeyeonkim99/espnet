@@ -11,7 +11,7 @@ from typeguard import typechecked
 
 from espnet2.asr.encoder.abs_encoder import AbsEncoder
 from espnet2.layers.mixup_augmentation import MixupAugment
-from espnet2.speechlm.tokenizer.beats_utils import beats_frontend
+from espnet2.speechlm.tokenizer.beats_utils import beats_frontend, forward_padding_mask_conv
 from espnet2.torch_utils.device_funcs import force_gatherable
 from espnet2.train.abs_espnet_model import AbsESPnetModel
 from espnet.nets.pytorch_backend.nets_utils import make_pad_mask
@@ -171,11 +171,16 @@ class BeatsPretrainModel(AbsESPnetModel):
         # for data-parallel
         speech = speech[:, : speech_lengths.max()]
         if self.waveform_input:
-            feats, feats_lengths = beats_frontend(
+            feats = beats_frontend(
                 speech.squeeze(-1),
                 fbank_mean=self.encoder.fbank_mean,
                 fbank_std=self.encoder.fbank_std,
             )
+            mask = make_pad_mask(speech_lengths, traceable=False).to(speech.device)
+            mask = forward_padding_mask_conv(
+                mask, n_dim=0, conv_module=self.encoder.raw2fbank_pad
+            )
+            feats_lengths = (~mask).sum(-1)
         else:
             feats, feats_lengths = speech, speech_lengths
         self.encoder.is_pretraining = old_is_pretraining
