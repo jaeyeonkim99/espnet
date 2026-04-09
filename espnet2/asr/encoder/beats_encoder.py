@@ -411,6 +411,8 @@ class BeatsEncoder(AbsEncoder):
             output_lens: (B,)
             masks: None
         """
+        # Truncate to actual max length to ensure mask/feature consistency
+        xs_pad = xs_pad[:, : ilens.max()]
         if xs_pad.dim() == 2 and waveform_input:
             xs_pad = xs_pad.unsqueeze(-1)  # (B,T) -> (B,T,1) for sound
         if self.roll_augment and self.training:
