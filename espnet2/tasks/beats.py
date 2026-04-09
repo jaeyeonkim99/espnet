@@ -161,8 +161,7 @@ class BeatsTask(AbsTask):
         else:
             raise RuntimeError("token_list must be str or list")
         vocab_size = len(token_list)
-        logger.info(f"Vocabulary size: {vocab_size }")
-        n_codebook_vectors = vocab_size - 1
+        logger.info(f"Vocabulary size: {vocab_size}")
 
         pretraining_model = args.model
         assert (args.model == args.encoder and args.model == "beats_tokenizer") or (

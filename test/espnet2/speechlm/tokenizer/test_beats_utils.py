@@ -1,7 +1,6 @@
 import pytest
 import torch
 
-from espnet2.speechlm.tokenizer.beats_tokenizer import BeatsRandomTokenizer
 from espnet2.speechlm.tokenizer.beats_utils import (
     beats_frontend,
     forward_padding_mask_conv,

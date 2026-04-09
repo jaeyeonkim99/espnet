@@ -117,7 +117,8 @@ def convert_checkpoint(
     else:
         key_prefix = "encoder."
     logger.info(
-        f"Reading and Averaging {num_checkpoints} checkpoints. Expected key prefix: {key_prefix}"
+        f"Reading and Averaging {num_checkpoints} checkpoints. "
+        f"Expected key prefix: {key_prefix}"
     )
     encoder_state_dict = average_checkpoints(
         espnet_model_checkpoint_paths,
@@ -174,7 +175,8 @@ def handle_finetuned_checkpoint(checkpoint, config):
 
 def get_cmdline_parser():
     parser = argparse.ArgumentParser(
-        description="Generate a checkpoint for Encoder from Pretraining model checkpoint.",
+        description="Generate a checkpoint for Encoder "
+        "from Pretraining model checkpoint.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -182,19 +184,22 @@ def get_cmdline_parser():
         type=str,
         nargs="+",
         required=True,
-        help="Paths to ESPnet model checkpoints. If multiple paths are provided, they will be averaged.",
+        help="Paths to ESPnet model checkpoints. "
+        "If multiple paths are provided, they will be averaged.",
     )
     parser.add_argument(
         "--deepspeed_checkpoint",
         action="store_true",
         default=False,
-        help="Is DeepSpeed checkpoint? If so, it will extract the state_dict from the 'module' key.",
+        help="Is DeepSpeed checkpoint? If so, it will extract "
+        "the state_dict from the 'module' key.",
     )
     parser.add_argument(
         "--lightning_checkpoint",
         action="store_true",
         default=False,
-        help="Is Lightning checkpoint? If so, it will extract the state_dict from the 'state_dict' key.",
+        help="Is Lightning checkpoint? If so, it will extract "
+        "the state_dict from the 'state_dict' key.",
     )
     parser.add_argument(
         "--espnet_model_config_path",

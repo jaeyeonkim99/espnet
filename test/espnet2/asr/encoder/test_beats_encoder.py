@@ -143,7 +143,7 @@ def test_forward_pass_pretraining_beats_encoder():
     assert (
         output_rep.size(1) == correct_length
     ), f"Representation length should be {correct_length}. It is {output_rep.size(1)}"
-    assert output_rep.size(2) == 768, f"Output dim should be 768"
+    assert output_rep.size(2) == 768, "Output dim should be 768"
     assert tuple(patch_len.tolist()) == (48, 96)
 
     assert kept_mask.shape == (

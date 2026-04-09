@@ -169,9 +169,9 @@ def test_build_collate_fn_beats():
 def test_build_model(model_name, beats_ckpt_path):
     args = get_dummy_namespace(beats_ckpt_path, model_name)
     if model_name == "beats":
-        model = BeatsTask.build_model(args)
+        BeatsTask.build_model(args)
     if model_name == "beats_tokenizer":
-        model = BeatsTokenizerTask.build_model(args)
+        BeatsTokenizerTask.build_model(args)
 
 
 @pytest.mark.parametrize("inference", [True, False])

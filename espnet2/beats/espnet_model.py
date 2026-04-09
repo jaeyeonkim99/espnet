@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Tuple
 
 import torch
 import torch.nn as nn
@@ -10,10 +10,13 @@ import torch.nn.functional as F
 from typeguard import typechecked
 
 from espnet2.asr.encoder.abs_encoder import AbsEncoder
-from espnet2.speechlm.tokenizer.beats_utils import beats_frontend, forward_padding_mask_conv
+from espnet2.legacy.nets.pytorch_backend.nets_utils import make_pad_mask
+from espnet2.speechlm.tokenizer.beats_utils import (
+    beats_frontend,
+    forward_padding_mask_conv,
+)
 from espnet2.torch_utils.device_funcs import force_gatherable
 from espnet2.train.abs_espnet_model import AbsESPnetModel
-from espnet2.legacy.nets.pytorch_backend.nets_utils import make_pad_mask
 
 logger = logging.getLogger(__name__)
 
@@ -290,9 +293,7 @@ class BeatsTokenizerPretrainModel(AbsESPnetModel):
         encoder_dict: dict,
     ):
         cos_sim = F.cosine_similarity(target, output, dim=-1)
-        pad_mask = make_pad_mask(lengths).to(
-            cos_sim.device
-        )  # can optimize
+        pad_mask = make_pad_mask(lengths).to(cos_sim.device)  # can optimize
         cos_sim[pad_mask] = 1.0
         cos_loss = (1 - cos_sim).sum() / lengths.sum()
         loss = cos_loss + encoder_dict["embed_loss"]

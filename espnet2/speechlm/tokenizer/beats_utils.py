@@ -32,13 +32,14 @@ def sample_vectors(samples, num):
 
 
 def kmeans(samples, num_clusters, num_iters=10, use_cosine_sim=False):
-    dim, dtype, device = samples.shape[-1], samples.dtype, samples.device
+    dim, dtype = samples.shape[-1], samples.dtype
     logging.info(
-        f"Running K-means with {num_clusters} clusters, {num_iters} iterations, and cosine similarity: {use_cosine_sim}"
+        f"Running K-means with {num_clusters} clusters, "
+        f"{num_iters} iterations, cosine similarity: {use_cosine_sim}"
     )
 
     means = sample_vectors(samples, num_clusters)
-    logging.info(f"Init means!")
+    logging.info("Init means!")
 
     for _ in range(num_iters):
         logging.info(f"Running iteration {_ + 1}...")
@@ -98,8 +99,9 @@ def forward_padding_mask_conv(
     conv_module: nn.Module,
 ):
     """Forward padding mask.
-    To be applied after features are passed through conv module or after converting to spectrogram,
-    for consistency.
+
+    To be applied after features are passed through conv module
+    or after converting to spectrogram, for consistency.
     padding_mask: BT
     n_dim: number of dimensions before the transformation was applied to features.
         When applying after fbank computation set this to a non-positive value.

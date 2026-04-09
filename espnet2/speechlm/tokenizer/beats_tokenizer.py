@@ -20,7 +20,6 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-import torchaudio.compliance.kaldi as ta_kaldi
 from packaging.version import parse as V
 from torch.nn import LayerNorm
 
@@ -39,6 +38,7 @@ from espnet2.asr.encoder.beats_encoder import (
     TransformerSentenceEncoderLayer,
     init_bert_params,
 )
+from espnet2.legacy.nets.pytorch_backend.nets_utils import make_pad_mask
 from espnet2.speechlm.tokenizer.beats_utils import (
     beats_frontend,
     ema_inplace,
@@ -49,7 +49,6 @@ from espnet2.speechlm.tokenizer.beats_utils import (
     norm_ema_inplace,
 )
 from espnet2.speechlm.tokenizer.random_tokenizer import RandomProjectionQuantizer
-from espnet2.legacy.nets.pytorch_backend.nets_utils import make_pad_mask
 
 
 class BeatsTokenizerConfig(BeatsConfig):
@@ -188,7 +187,8 @@ class NormEMAVectorQuantizer(nn.Module):
             self.register_buffer("cluster_size", torch.zeros(n_embed))
         if torch.distributed.is_available() and torch.distributed.is_initialized():
             logging.info(
-                "ddp is enabled, so use ddp_reduce to sync the cluster_size for each gpu!"
+                "ddp is enabled, use ddp_reduce to sync "
+                "the cluster_size for each gpu!"
             )
             self.all_reduce_fn = torch.distributed.all_reduce
         else:
@@ -330,7 +330,9 @@ class BeatsTokenizerPretrainingPredictor(nn.Module):
                     activation_fn=tokenizer_config.activation_fn,
                     layer_norm_first=tokenizer_config.layer_norm_first,
                     deep_norm=tokenizer_config.deep_norm,
-                    has_relative_attention_bias=tokenizer_config.relative_position_embedding,
+                    has_relative_attention_bias=(
+                        tokenizer_config.relative_position_embedding
+                    ),
                     num_buckets=tokenizer_config.num_buckets,
                     max_distance=tokenizer_config.max_distance,
                     gru_rel_pos=tokenizer_config.gru_rel_pos,

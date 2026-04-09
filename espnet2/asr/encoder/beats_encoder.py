@@ -44,9 +44,9 @@ from espnet2.speechlm.tokenizer.beats_utils import (
 )
 
 
-is_torch_v25_to_v26 = V(torch.__version__) >= V("2.5.0") and V(
-    torch.__version__
-) <= V("2.6.0")
+is_torch_v25_to_v26 = V(torch.__version__) >= V("2.5.0") and V(torch.__version__) <= V(
+    "2.6.0"
+)
 
 
 class BeatsConfig:
@@ -644,7 +644,9 @@ class BeatsPretrainingPredictor(nn.Module):
                     activation_fn=beats_config.activation_fn,
                     layer_norm_first=beats_config.layer_norm_first,
                     deep_norm=beats_config.deep_norm,
-                    has_relative_attention_bias=beats_config.relative_position_embedding,
+                    has_relative_attention_bias=(
+                        beats_config.relative_position_embedding
+                    ),
                     num_buckets=beats_config.num_buckets,
                     max_distance=beats_config.max_distance,
                     gru_rel_pos=beats_config.gru_rel_pos,
@@ -701,9 +703,7 @@ class BeatsPretrainingPredictor(nn.Module):
         restore_ids: torch.Tensor,  # B,T_large
         kept_mask: torch.Tensor,  # B,T_large
     ):
-        padding_mask = make_pad_mask(lengths=patch_len).to(
-            audio_representation.device
-        )
+        padding_mask = make_pad_mask(lengths=patch_len).to(audio_representation.device)
         x = self.decoder_embed(audio_representation)
         mask_tokens = self.mask_token.repeat(
             x.shape[0], restore_ids.shape[1] - x.shape[1], 1
@@ -1385,7 +1385,9 @@ class MultiheadAttention(nn.Module):
                 k = k.contiguous().view(bsz, self.num_heads, src_len, self.k_head_dim)
                 v = v.contiguous().view(bsz, self.num_heads, src_len, self.head_dim)
             if key_padding_mask is not None:
-                assert attn_mask is None, "key_padding_mask not supported with attn_mask"
+                assert (
+                    attn_mask is None
+                ), "key_padding_mask not supported with attn_mask"
                 attn_mask = key_padding_mask == 0  # B x keylen(srclen)
                 attn_mask = attn_mask.unsqueeze(1).expand(-1, tgt_len, -1)
 

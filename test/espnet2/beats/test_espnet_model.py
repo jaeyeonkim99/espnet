@@ -1,4 +1,3 @@
-import pytest
 import torch
 from packaging.version import parse as V
 
@@ -28,9 +27,7 @@ def test_forward_backward_beats_pretrain_model():
         is_pretraining=True,
     )
     predictor = BeatsPretrainingPredictor(beats_config=beats_config)
-    model = BeatsPretrainModel(
-        encoder=encoder, decoder=predictor, waveform_input=True
-    )
+    model = BeatsPretrainModel(encoder=encoder, decoder=predictor, waveform_input=True)
     inputs = dict(
         speech=torch.randn(2, 16000, dtype=torch.float32, requires_grad=True),
         speech_lengths=torch.tensor([16000, 8000], dtype=torch.long),
