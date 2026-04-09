@@ -10,7 +10,6 @@ import torch.nn.functional as F
 from typeguard import typechecked
 
 from espnet2.asr.encoder.abs_encoder import AbsEncoder
-from espnet2.layers.mixup_augmentation import MixupAugment
 from espnet2.speechlm.tokenizer.beats_utils import beats_frontend, forward_padding_mask_conv
 from espnet2.torch_utils.device_funcs import force_gatherable
 from espnet2.train.abs_espnet_model import AbsESPnetModel
@@ -30,7 +29,6 @@ class BeatsPretrainModel(AbsESPnetModel):
         ignore_id: int = -2,
         label_smoothing: float = 0.1,
         waveform_input: bool = False,
-        mixup_probability: float = 0.0,
         contrastive_loss_weight: float = 0.0,
     ):
         super().__init__()
@@ -44,10 +42,6 @@ class BeatsPretrainModel(AbsESPnetModel):
             getattr(encoder, "config", None), "codebook_vocab_size", None
         )
         self.waveform_input = waveform_input
-        self.mixup_probability = mixup_probability
-        self.mixup_augmentation = (
-            MixupAugment(mixup_probability) if mixup_probability > 0.0 else None
-        )
         self.loss_function = torch.nn.CrossEntropyLoss(
             ignore_index=ignore_id,
             label_smoothing=label_smoothing,
@@ -103,18 +97,6 @@ class BeatsPretrainModel(AbsESPnetModel):
         # for data-parallel
         speech = speech[:, : speech_lengths.max()]
         target = target[:, : target_lengths.max()]
-        onehot_ = None
-        if self.training and self.mixup_augmentation is not None:
-            onehot_ = (target - 1).reshape(-1, 1).contiguous()
-            onehot_[onehot_ < 0] = 0  # -1 to 0
-            onehot_ = F.one_hot(
-                onehot_.squeeze(-1),
-                num_classes=self.n_targets,
-            ).float()
-            onehot_ = onehot_.reshape(target.shape[0], target.shape[1], -1).contiguous()
-            speech, onehot_, speech_lengths = self.mixup_augmentation(
-                speech, onehot_, speech_lengths
-            )
 
         # unmasked_patch_emb (Batch, n_patch*kept_ratio, emb_dim)
         # restore_ids (Batch, n_patch) -- permutation of [0, 1, ..., n_patch-1]
@@ -125,7 +107,6 @@ class BeatsPretrainModel(AbsESPnetModel):
         )
 
         target = target[:, : patch_len.max()]
-        onehot_ = onehot_[:, : patch_len.max()] if onehot_ is not None else None
 
         if self.contrastive_loss_weight != 0:
             contrastive_loss = (
@@ -138,14 +119,11 @@ class BeatsPretrainModel(AbsESPnetModel):
             kept_mask = kept_mask[:, 1:]
             patch_len = torch.cat([patch_len, patch_len], dim=0)
             target = torch.cat([target, target], dim=0)
-            onehot_ = (
-                torch.cat([onehot_, onehot_], dim=0) if onehot_ is not None else None
-            )
 
         logits = self.decoder(unmasked_patch_emb, patch_len, restore_ids, kept_mask)
 
         loss, stats = self._calc_beats_loss(
-            logits, target - 1, ~kept_mask, patch_len, onehot_
+            logits, target - 1, ~kept_mask, patch_len
         )  # target - 1 because of unk token at 0th position
 
         if self.contrastive_loss_weight != 0:
@@ -192,7 +170,6 @@ class BeatsPretrainModel(AbsESPnetModel):
         target: torch.Tensor,
         masked: torch.Tensor,
         speech_lengths: torch.Tensor,
-        onehot_: Optional[torch.Tensor] = None,
     ):
         """Compute loss for Beats model.
         Args:
@@ -200,18 +177,13 @@ class BeatsPretrainModel(AbsESPnetModel):
             target: (Batch, n_patch)
             masked: (Batch, n_patch) -- True for masked, False for unmasked
             speech_lengths: (Batch, )
-            onehot_: (Batch, n_patch, codebook_size) -- onehot target for mixup
         Returns:
             loss: scalar
             acc_mask: scalar
             acc_unmask: scalar
         """
         logits = logits.transpose(1, 2)  # (Batch, codebook_size, n_patch)
-        if onehot_ is not None:
-            onehot_ = onehot_.transpose(1, 2)
-            loss = self.loss_function(logits, onehot_)  # mixup loss
-        else:
-            loss = self.loss_function(logits, target)
+        loss = self.loss_function(logits, target)
         loss = loss * masked  # do not count loss for unmasked patches
         loss = loss.sum()
 
