@@ -49,7 +49,7 @@ from espnet2.speechlm.tokenizer.beats_utils import (
     norm_ema_inplace,
 )
 from espnet2.speechlm.tokenizer.random_tokenizer import RandomProjectionQuantizer
-from espnet.nets.pytorch_backend.nets_utils import make_pad_mask
+from espnet2.legacy.nets.pytorch_backend.nets_utils import make_pad_mask
 
 
 class BeatsTokenizerConfig(BeatsConfig):
@@ -59,6 +59,7 @@ class BeatsTokenizerConfig(BeatsConfig):
         self.quant_n: int = 1024  # number of vec in quantizer coebook
         self.quant_dim: int = 256  # codebook dimension in quantizer
         self.embed_loss_beta: float = 1.0  # e15  # beta for embedding loss
+        self.seed: int = 0  # seed for random tokenizer initialization
 
         if cfg is not None:
             self.update(cfg)
@@ -378,7 +379,6 @@ class BeatsTokenizerPretrainingPredictor(nn.Module):
         quantize_feature = quantize_feature[:, : quantize_feats_len.max(), :]
         padding_mask = make_pad_mask(
             lengths=quantize_feats_len,
-            traceable=False,
         ).to(quantize_feature.device)
         x = self.connector_layer(quantize_feature)
 
@@ -485,7 +485,7 @@ class BeatsRandomTokenizer(nn.Module):
         xs_pad = xs_pad[:, : ilens.max()]
         if waveform_input:
             assert xs_pad.dim() == 2
-        padding_mask = make_pad_mask(lengths=ilens, traceable=False).to(xs_pad.device)
+        padding_mask = make_pad_mask(lengths=ilens).to(xs_pad.device)
         if waveform_input:
             padding_mask = forward_padding_mask_conv(
                 padding_mask=padding_mask, n_dim=0, conv_module=self.raw2fbank_pad

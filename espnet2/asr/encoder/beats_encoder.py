@@ -415,7 +415,7 @@ class BeatsEncoder(AbsEncoder):
             xs_pad = xs_pad.unsqueeze(-1)  # (B,T) -> (B,T,1) for sound
         if self.roll_augment and self.training:
             xs_pad = roll_tensor(xs_pad, ilens, fixed_intervals=self.roll_interval)
-        mask = make_pad_mask(lengths=ilens, traceable=False).to(xs_pad.device)
+        mask = make_pad_mask(lengths=ilens).to(xs_pad.device)
         audio_representation, mask, restore_ids, kept_mask, patch_padding_mask = (
             self.extract_features(
                 xs_pad,
@@ -468,7 +468,7 @@ class BeatsEncoder(AbsEncoder):
         ids_keep = ids_shuffle[:, :max_len_kept]
 
         # make new masks
-        padding_mask = make_pad_mask(lengths=len_keep, traceable=False).to(x.device)
+        padding_mask = make_pad_mask(lengths=len_keep).to(x.device)
         kept = torch.cat(
             [
                 ~padding_mask,
@@ -699,7 +699,7 @@ class BeatsPretrainingPredictor(nn.Module):
         restore_ids: torch.Tensor,  # B,T_large
         kept_mask: torch.Tensor,  # B,T_large
     ):
-        padding_mask = make_pad_mask(lengths=patch_len, traceable=False).to(
+        padding_mask = make_pad_mask(lengths=patch_len).to(
             audio_representation.device
         )
         x = self.decoder_embed(audio_representation)

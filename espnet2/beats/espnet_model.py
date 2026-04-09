@@ -14,7 +14,7 @@ from espnet2.layers.mixup_augmentation import MixupAugment
 from espnet2.speechlm.tokenizer.beats_utils import beats_frontend, forward_padding_mask_conv
 from espnet2.torch_utils.device_funcs import force_gatherable
 from espnet2.train.abs_espnet_model import AbsESPnetModel
-from espnet.nets.pytorch_backend.nets_utils import make_pad_mask
+from espnet2.legacy.nets.pytorch_backend.nets_utils import make_pad_mask
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ class BeatsPretrainModel(AbsESPnetModel):
                 fbank_mean=self.encoder.fbank_mean,
                 fbank_std=self.encoder.fbank_std,
             )
-            mask = make_pad_mask(speech_lengths, traceable=False).to(speech.device)
+            mask = make_pad_mask(speech_lengths).to(speech.device)
             mask = forward_padding_mask_conv(
                 mask, n_dim=0, conv_module=self.encoder.raw2fbank_pad
             )
@@ -215,7 +215,7 @@ class BeatsPretrainModel(AbsESPnetModel):
         loss = loss * masked  # do not count loss for unmasked patches
         loss = loss.sum()
 
-        padding_mask = make_pad_mask(speech_lengths, traceable=False).to(loss.device)
+        padding_mask = make_pad_mask(speech_lengths).to(loss.device)
         unmasked = ~masked & ~padding_mask  # not masked and not padded
         masked = masked & ~padding_mask  # masked and not padded, no-op
 
@@ -318,7 +318,7 @@ class BeatsTokenizerPretrainModel(AbsESPnetModel):
         encoder_dict: dict,
     ):
         cos_sim = F.cosine_similarity(target, output, dim=-1)
-        pad_mask = make_pad_mask(lengths, traceable=False).to(
+        pad_mask = make_pad_mask(lengths).to(
             cos_sim.device
         )  # can optimize
         cos_sim[pad_mask] = 1.0
