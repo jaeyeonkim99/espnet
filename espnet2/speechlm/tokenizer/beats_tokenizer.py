@@ -74,8 +74,8 @@ class BeatsTokenizer(BeatsEncoder):
         tokenizer_config: Optional[Dict] = None,
         max_layer: int = None,
         use_weighted_representation: bool = False,
-        fbank_mean: float = 15.41663,
-        fbank_std: float = 6.55582,
+        fbank_mean: float = 15.29130,
+        fbank_std: float = 5.90532,
     ) -> None:
         if beats_tokenizer_ckpt_path is None:
             logging.info(
@@ -407,8 +407,8 @@ class BeatsRandomTokenizer(nn.Module):
     def __init__(
         self,
         tokenizer_config: Optional[Dict] = None,
-        fbank_mean: float = 15.41663,
-        fbank_std: float = 6.55582,
+        fbank_mean: float = 15.29130,
+        fbank_std: float = 5.90532,
     ) -> None:
         super().__init__()
         self.fbank_mean = fbank_mean
