@@ -46,6 +46,11 @@ audio_format=wav    # Audio format: wav, flac, wav.ark, flac.ark  (only in feats
 fs=16k               # Sampling rate.
 min_wav_duration=0.1 # Minimum duration in second.
 max_wav_duration=20  # Maximum duration in second.
+use_corpus_fbank_stats=true  # If true, after stage 4 overwrite fbank_mean/fbank_std in
+                             # train_config / tokenizer_train_config / tokenizer_inference_config
+                             # with stats computed over this corpus's training set.
+                             # Set false to keep the values already in those configs (e.g. when
+                             # finetuning from / continual-pretraining a published BEATs ckpt).
 
 # Pretrain model related
 ssl_tag=       # Suffix to the result dir for ssl model training.
@@ -270,6 +275,22 @@ if ! "${skip_data_prep}"; then
                 cp "${data_feats}/org/${dset}/fbank_stats.txt" "${data_feats}/${dset}/fbank_stats.txt"
                 # NOTE(shikhar): After this stage we have data in both raw and fbank format.
             done
+
+            if "${use_corpus_fbank_stats}"; then
+                _stats_file="${data_feats}/${train_set}/fbank_stats.txt"
+                if [ ! -f "${_stats_file}" ]; then
+                    log "WARNING: ${_stats_file} not found; skipping fbank-stats overlay."
+                else
+                    for _cfg in "${train_config}" "${tokenizer_train_config}" "${tokenizer_inference_config}"; do
+                        [ -z "${_cfg}" ] && continue
+                        [ ! -f "${_cfg}" ] && continue
+                        log "Overlaying corpus fbank stats from ${_stats_file} into ${_cfg}"
+                        ${python} pyscripts/utils/overlay_fbank_stats.py \
+                            --stats_file "${_stats_file}" \
+                            --config "${_cfg}"
+                    done
+                fi
+            fi
         else
             log "Skip the stage for feature extraction"
         fi
