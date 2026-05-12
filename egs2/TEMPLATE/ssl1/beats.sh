@@ -473,7 +473,7 @@ tokenizer_inference() {
     _nj=$((ngpu==0?nj:ngpu))
     _ngpu=$((ngpu==0?0:1))
 
-    for _data_dir in "${_ssl_train_dir}"; do
+    for _data_dir in "${_ssl_train_dir}" "${_ssl_valid_dir}"; do
         final_target_path_="${_data_dir}/target_iter${iteration}_${_tokenizer_inference_tag}"
         if [ -f "${final_target_path_}" ]; then
             log "Skipping tokenizer inference for ${_data_dir} as target already exists at ${final_target_path_}"
@@ -496,7 +496,6 @@ if ! "${skip_train}"; then
     if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         log "Stage 5: BEATs Random Tokenization: ${data_feats}/${train_set}, ${data_feats}/${valid_set}"
         setup_common_vars
-        tokenizer_inference 3
 
         _opts=
         if [ -n "${tokenizer_inference_config}" ]; then
@@ -571,7 +570,7 @@ if ! "${skip_train}"; then
         log "BEATs collect-stats started... log: '${_logdir}/stats.*.log'"
 
         # Run collectstats
-        # shellcheck disableSC2046,SC2086
+        # shellcheck disable=SC2046,SC2086
         ${train_cmd} JOB=1:"${_nj}" "${_logdir}"/stats.JOB.log \
             ${python} -m espnet2.bin.beats_train \
                 --collect_stats true \
@@ -581,20 +580,6 @@ if ! "${skip_train}"; then
                 --train_data_path_and_name_and_type "${_ssl_train_dir}/target_iter0_${_tokenizer_inference_tag},target,text" \
                 --valid_data_path_and_name_and_type "${_ssl_valid_dir}/${_scp},speech,${_type}" \
                 --valid_data_path_and_name_and_type "${_ssl_valid_dir}/target_iter0_${_tokenizer_inference_tag},target,text" \
-                --train_shape_file "${_logdir}/train.JOB.scp" \
-                --valid_shape_file "${_logdir}/valid.JOB.scp" \
-                --output_dir "${_logdir}/stats.JOB" \
-                ${_opts} ${beats_args} || { cat $(grep -l -i error "${_logdir}"/stats.*.log) ; exit 1; }
-
-        ${train_cmd} JOB=1:"${_nj}" "${_logdir}"/stats.JOB.log \
-            ${python} -m espnet2.bin.beats_train \
-                --collect_stats true \
-                --use_preprocessor true \
-                --token_list "${token_listdir}/tokens.txt" \
-                --train_data_path_and_name_and_type "${_ssl_train_dir}/${_scp},speech,${_type}" \
-                --train_data_path_and_name_and_type "${_ssl_train_dir}/target_iter3_${_tokenizer_inference_tag},target,text" \
-                --valid_data_path_and_name_and_type "${_ssl_valid_dir}/${_scp},speech,${_type}" \
-                --valid_data_path_and_name_and_type "${_ssl_valid_dir}/target_iter3_${_tokenizer_inference_tag},target,text" \
                 --train_shape_file "${_logdir}/train.JOB.scp" \
                 --valid_shape_file "${_logdir}/valid.JOB.scp" \
                 --output_dir "${_logdir}/stats.JOB" \
@@ -622,7 +607,7 @@ if ! "${skip_train}"; then
     if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
         setup_common_vars
         log "Stage 7: BEATs Training: train_set=${_ssl_train_dir}, valid_set=${_ssl_valid_dir}"
-        for ((iter=${train_start_iter}; iter<=${train_stop_iter};iter++)); do
+        for ((iter=train_start_iter; iter<=train_stop_iter; iter++)); do
             log "Starting iteration ${iter} of BEATs Training"
             if ! [ ${iter} -eq 0 ]; then
                 if [ -z "${external_tokenizer_model}" ]; then
