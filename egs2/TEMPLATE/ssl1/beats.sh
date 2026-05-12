@@ -306,29 +306,66 @@ setup_common_vars() {
 }
 
 
+# Resolve the trainer's best-model symlink to an epoch number. Tries the
+# usual best/ave_1best symlinks the ESPnet trainer creates, in priority
+# order (loss-first since SSL pretraining acc is noisy and tokenizer
+# training only reports loss).
+_best_epoch_from_run_dir() {
+    local run_dir_=$1
+    local cand_ best_link_ target_
+    for cand_ in valid.loss.best.pth valid.acc.best.pth \
+                 valid.loss.ave_1best.pth valid.acc.ave_1best.pth; do
+        if [[ -L "${run_dir_}/${cand_}" || -f "${run_dir_}/${cand_}" ]]; then
+            best_link_="${run_dir_}/${cand_}"
+            break
+        fi
+    done
+    [[ -z "${best_link_}" ]] && return 1
+    # readlink works even when the target file is missing (DS + n=1 case).
+    target_=$(readlink "${best_link_}" 2>/dev/null) || target_=$(basename "${best_link_}")
+    target_=$(basename "${target_}")
+    [[ "${target_}" =~ ^([0-9]+)epoch\.pth$ ]] || return 1
+    echo "${BASH_REMATCH[1]}"
+}
+
+# Convert a trainer-saved checkpoint into the portable BEATs format used as
+# teacher / tokenizer between iterations. Always picks the best-valid epoch
+# (per best_model_criterion); auto-detects DeepSpeed vs regular trainer
+# layout based on which artifact exists for that epoch.
 generate_checkpoint() {
     run_dir_=$1
     output_path_=$2
 
-    latest_checkpoint_dir_=$(find "${run_dir_}/checkpoint_"* -type d | sort -V | tail -n 1)
-    if [[ -z "$latest_checkpoint_dir_" ]]; then
-        log "Error: No checkpoints found in ${run_dir_}"
-        return 1
-    fi
-    checkpoint_num_=$(basename "${latest_checkpoint_dir_}" | grep -oE '[0-9]+')
-    if [[ -z "$checkpoint_num_" ]]; then
-        log "Error: Failed to extract checkpoint number from ${latest_checkpoint_dir_}"
+    best_epoch_=$(_best_epoch_from_run_dir "${run_dir_}")
+    if [[ -z "${best_epoch_}" ]]; then
+        log "Error: Could not determine best-valid epoch from ${run_dir_}"
         return 1
     fi
 
-    # TODO(shikhar): Move to scripts?
-    ${python} ../../../../espnet/espnet2/beats/generate_beats_checkpoint.py \
-        --espnet_model_checkpoint_path "${latest_checkpoint_dir_}/mp_rank_00_model_states.pt" \
-        --output_path "${output_path_}" \
-        --espnet_model_config_path "${run_dir_}/config.yaml" \
-        --deepspeed_checkpoint
+    # DeepSpeed's save_checkpoint(dir, tag) writes under dir/tag/, so the
+    # actual layout is checkpoint_<e>/<e>/mp_rank_00_model_states.pt.
+    ds_ckpt_="${run_dir_}/checkpoint_${best_epoch_}/${best_epoch_}/mp_rank_00_model_states.pt"
+    plain_ckpt_="${run_dir_}/${best_epoch_}epoch.pth"
 
-    log "Checkpoint converted and stored at ${output_path_}"
+    if [[ -f "${ds_ckpt_}" ]]; then
+        log "Converting DeepSpeed checkpoint at epoch ${best_epoch_}: ${ds_ckpt_}"
+        ${python} ../../../../espnet/espnet2/beats/generate_beats_checkpoint.py \
+            --espnet_model_checkpoint_path "${ds_ckpt_}" \
+            --output_path "${output_path_}" \
+            --espnet_model_config_path "${run_dir_}/config.yaml" \
+            --deepspeed_checkpoint
+    elif [[ -f "${plain_ckpt_}" ]]; then
+        log "Converting ESPnet checkpoint at epoch ${best_epoch_}: ${plain_ckpt_}"
+        ${python} ../../../../espnet/espnet2/beats/generate_beats_checkpoint.py \
+            --espnet_model_checkpoint_path "${plain_ckpt_}" \
+            --output_path "${output_path_}" \
+            --espnet_model_config_path "${run_dir_}/config.yaml"
+    else
+        log "Error: best epoch is ${best_epoch_} but no checkpoint at ${ds_ckpt_} or ${plain_ckpt_}"
+        return 1
+    fi
+
+    log "Checkpoint converted (best epoch ${best_epoch_}) and stored at ${output_path_}"
 }
 
 train_encoder() {
@@ -393,7 +430,7 @@ train_encoder() {
             ${_opts} ${beats_args}
 
     # Generate float32 checkpoint after training completes
-    checkpoint_path="${ssl_exp}/epoch_latest.pt"
+    checkpoint_path="${ssl_exp}/beats_encoder_iter${iteration}.pt"
     log "Generating float32 checkpoint from encoder training: ${checkpoint_path}"
     generate_checkpoint "${ssl_exp}" "${checkpoint_path}"
 }
@@ -408,7 +445,7 @@ train_tokenizer() {
     # Setup teacher
     prev_iter=$((iteration - 1))
     prev_model_dir="${expdir}/beats_iter${prev_iter}_${ssl_tag}"
-    teacher_ckpt_path_="${prev_model_dir}/epoch_latest.pt"
+    teacher_ckpt_path_="${prev_model_dir}/beats_encoder_iter${prev_iter}.pt"
 
     if [ -n "${external_teacher_model}" ]; then
         teacher_ckpt_path_="${external_teacher_model}"
@@ -448,7 +485,7 @@ train_tokenizer() {
 
     # Convert tokenizer checkpoint to float32 for inference
     log "Generating float32 checkpoint from tokenizer training"
-    checkpoint_path="${ssl_tokenizer_exp}/epoch_latest.pt"
+    checkpoint_path="${ssl_tokenizer_exp}/beats_tokenizer_iter${iteration}.pt"
     generate_checkpoint "${ssl_tokenizer_exp}" "${checkpoint_path}"
 }
 
@@ -460,7 +497,7 @@ tokenizer_inference() {
     if [ -n "${external_tokenizer_model}" ]; then
         _opts+="--checkpoint_path ${external_tokenizer_model} "
     else
-        tokenizer_checkpoint_path_="${ssl_tokenizer_exp}/epoch_latest.pt"
+        tokenizer_checkpoint_path_="${ssl_tokenizer_exp}/beats_tokenizer_iter${iteration}.pt"
         if [ ! -f "${tokenizer_checkpoint_path_}" ]; then
             log "Generating tokenizer checkpoint for inference"
             generate_checkpoint "${ssl_tokenizer_exp}" "${tokenizer_checkpoint_path_}"
