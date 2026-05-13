@@ -9,7 +9,7 @@ from distutils.util import strtobool
 
 import kaldiio
 import numpy
-import resampy
+import librosa
 import torch
 import torchaudio.compliance.kaldi as ta_kaldi
 
@@ -109,7 +109,7 @@ def kaldi_fbank_extractor(array, rate, args):
     array = torch.from_numpy(array).unsqueeze(0)  # (1, T)
     if args.normalize is not None and args.normalize != 1:
         array = array * (1 << (args.normalize - 1))
-    # TODO: Add support for more arguments, probably as a dictionary
+    # TODO(shikhar): Add support for more arguments, probably as a dictionary
     fbank = ta_kaldi.fbank(
         array,
         num_mel_bins=args.n_mels,
@@ -164,7 +164,9 @@ def main():
         for utt_id, (rate, array) in reader:
             array = array.astype(numpy.float32)
             if args.fs is not None and rate != args.fs:
-                array = resampy.resample(array, rate, args.fs, axis=0)
+                array = librosa.resample(
+                    array, orig_sr=rate, target_sr=args.fs, axis=0
+                )
             if args.normalize is not None and args.normalize != 1:
                 array = array / (1 << (args.normalize - 1))
 

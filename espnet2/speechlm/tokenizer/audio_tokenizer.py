@@ -103,8 +103,8 @@ class AudioTokenizer(AbsTokenizer):
             raise ValueError(f"Codec {codec_choice} is not supported")
 
     def encode(self, wavs, wav_lens=None):
-        """
-        Convert audio waveforms into codec codes
+        """Convert audio waveforms into codec codes.
+
         Input:
             wavs (torch.Tensor): float tensor in shape [B, n_sample, D],
             wav_lens (torch.Tensor): int tensor in shape [B]
@@ -133,8 +133,8 @@ class AudioTokenizer(AbsTokenizer):
         return codes, code_lengths
 
     def forward(self, wavs, wav_lens=None):
-        """
-        Convert audio waveforms into flatten codec codes and resynthesis the audio
+        """Convert audio waveforms into flatten codec codes and resynthesis the audio.
+
         Input:
             wavs (torch.Tensor): float tensor in shape [B, n_sample, D],
             wav_lens (torch.Tensor): int tensor in shape [B]

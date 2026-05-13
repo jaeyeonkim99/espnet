@@ -265,7 +265,7 @@ if ! "${skip_data_prep}"; then
                 rm -f ${data_feats}/org/${dset}/{reco2file_and_channel,reco2dur}
                 # shellcheck disable=SC2086
                 _fs=$(python3 -c "import humanfriendly as h;print(h.parse_size('${fs}'))")
-                steps/make_fbank.sh --cmd "${train_cmd}" --nj "${nj}" --fs "${_fs}" \
+                scripts/feats/make_fbank_with_stats.sh --cmd "${train_cmd}" --nj "${nj}" --fs "${_fs}" \
                             --fbank_stats_file fbank_stats \
                             --n_mels 128 --use_kaldi true "${data_feats}/org/${dset}"
 

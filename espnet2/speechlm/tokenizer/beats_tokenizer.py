@@ -141,8 +141,8 @@ class BeatsTokenizer(BeatsEncoder):
         ilens: Optional[torch.Tensor] = None,
         waveform_input: bool = True,
     ):
-        """
-        Encodes input audio xs_pad to quantized features.
+        """Encode input audio xs_pad to quantized features.
+
         Args:
             xs_pad (torch.Tensor): Input tensor (B, T, D) or (B,T,1).
             ilens (torch.Tensor): Input length tensor (B,).
@@ -201,9 +201,10 @@ class NormEMAVectorQuantizer(nn.Module):
 
     def forward(self, z):
         """Encode the input with the vector quantizer.
-        Args
+
+        Args:
             z: (B, T, D) input tensor
-        Returns
+        Returns:
             z_q: (B, T, D) quantized tensor
             loss: scalar quantization loss
             encoding_indices: (B, T) indices of the quantized embeddings
@@ -477,7 +478,8 @@ class BeatsRandomTokenizer(nn.Module):
     def forward(
         self, xs_pad: torch.Tensor, ilens: torch.Tensor, waveform_input: bool = True
     ):
-        """
+        """Tokenize input audio into BEATs codes.
+
         Args:
             xs_pad (torch.Tensor): Input tensor (B, T) or (B,T,D).
                 (B,T) for raw waveform and (B,T,D) for features.

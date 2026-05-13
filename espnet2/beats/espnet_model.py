@@ -175,6 +175,7 @@ class BeatsPretrainModel(AbsESPnetModel):
         speech_lengths: torch.Tensor,
     ):
         """Compute loss for Beats model.
+
         Args:
             logits: (Batch, n_patch, codebook_size)
             target: (Batch, n_patch)

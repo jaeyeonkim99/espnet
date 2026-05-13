@@ -440,7 +440,8 @@ class BeatsEncoder(AbsEncoder):
         return audio_representation, output_lens, None
 
     def mask_sequence(self, x, padding_mask):
-        """Masks the input embedding sequence x for MLM style training.
+        """Mask the input embedding sequence x for MLM style training.
+
         Needs self.mask_ratio to be set.
 
         Args:
@@ -510,6 +511,7 @@ class BeatsEncoder(AbsEncoder):
         skip_fbank_extraction: bool = False,
     ):
         """Extract features from raw audio.
+
         source: (B,T,D). for waveform input D=1, for features D=feature_dim
         padding_mask: (B,T). If True then pad the element.
         """
@@ -532,6 +534,8 @@ class BeatsEncoder(AbsEncoder):
             if skip_fbank_extraction:
                 fbank = (source - self.fbank_mean) / (2 * self.fbank_std)
             else:
+                if source.dim() == 3 and source.size(-1) == 1:
+                    source = source.squeeze(-1)
                 fbank = self.preprocess(source)
 
             if self.specaug is not None and self.training:
