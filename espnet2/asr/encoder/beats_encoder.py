@@ -20,6 +20,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio.compliance.kaldi as ta_kaldi
+from packaging.version import parse as V
 from torch.amp import autocast
 from torch.nn import LayerNorm, Parameter
 
@@ -42,7 +43,6 @@ from espnet2.speechlm.tokenizer.beats_utils import (
     forward_padding_mask_conv,
     freeze_conv_module,
 )
-
 
 is_torch_v25_to_v26 = V(torch.__version__) >= V("2.5.0") and V(torch.__version__) <= V(
     "2.6.0"
