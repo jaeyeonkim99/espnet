@@ -14,7 +14,6 @@ import torch
 import torchaudio.compliance.kaldi as ta_kaldi
 
 from espnet2.legacy.utils.cli_utils import get_commandline_args
-from espnet2.legacy.utils.cli_writers import file_writer_helper
 from espnet2.utils.types import int_or_none
 
 
@@ -138,6 +137,9 @@ def espnet_fbank_extractor(array, rate, args):
 
 
 def main():
+    # cli_writers requires h5py (optional dep)
+    from espnet2.legacy.utils.cli_writers import file_writer_helper
+
     parser = get_parser()
     args = parser.parse_args()
 
