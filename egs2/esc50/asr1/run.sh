@@ -8,7 +8,7 @@ set -o pipefail
 asr_speech_fold_length=1000 # 6.25 sec, because audio is 5 sec each.
 inference_model=valid.acc.best.pth
 
-n_folds=5 # This runs all 5 folds in parallel, take care.
+n_folds=1 # This runs all 5 folds in parallel, take care.
 
 asr_config=conf/beats_classification.yaml
 
@@ -24,7 +24,8 @@ for fold in $(seq 1 $n_folds); do
         --asr_tag "${mynametag}${fold}" \
         --lang "${fold}" \
         --ngpu 1 \
-        --stage 15 \
+        --stage 10 \
+        --stop_stage 13 \
         --inference_args "--ctc_weight 0.0 --maxlenratio -1" \
         --token_type word \
         --asr_speech_fold_length ${asr_speech_fold_length} \

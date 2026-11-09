@@ -24,44 +24,43 @@ log "$0 $*"
 FOLD=${1:-1}
 DATA_PREP_ROOT=${2:-"."}
 
-if [ -z "${ESC50}" ]; then
-    log "Fill the value of 'ESC50' of db.sh"
+if [ -z "${VGGSOUND}" ]; then
+    log "Fill the value of 'VGGSOUND' of db.sh"
     exit 1
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    if [ ! -e "${ESC50}/LICENSE" ]; then
-	    echo "stage 1: Download data to ${ESC50}"
+    log "stage 1: Checking VGGSound data directory"
+    
+    # Check if VGGSOUND directory exists
+    if [ ! -d "${VGGSOUND}" ]; then
+        log "Error: ${VGGSOUND} directory does not exist!"
+        exit 1
+    fi
+    
+    # Count .mp4 files
+    mp4_count=$(find "${VGGSOUND}" -name "*.mp4" -type f | wc -l)
+    log "Found ${mp4_count} .mp4 files in ${VGGSOUND}"
+    
+    if [ ${mp4_count} -eq 0 ]; then
+        log "Warning: No .mp4 files found in ${VGGSOUND}"
+        log "Please download VGGSound videos first"
     else
-        log "stage 1: ${ESC50}/LICENSE is already existing. Skip data downloading"
+        log "VGGSound data check completed successfully"
     fi
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     log "stage 2: Data Preparation"
 
-    if [ ${FOLD} -le 1 ] && [ ${FOLD} -ge 1 ]; then
-        # Keep the code from SLU, FOLD 1 is default
-        mkdir -p data/{train,valid,test}
-        python3 local/data_prep.py ${ESC50}
-        for x in test valid train; do
-            for f in text wav.scp utt2spk; do
-                sort data/${x}/${f} -o data/${x}/${f}
-            done
-            utils/utt2spk_to_spk2utt.pl data/${x}/utt2spk > "data/${x}/spk2utt"
-            utils/validate_data_dir.sh --no-feats data/${x} || exit 1
-        done
-    fi
-
-    # Prepare data for 5-fold cross-validation
-    echo "Preparing data for fold ${FOLD}"
-    python3 local/data_prep_multi_folds.py ${ESC50} ${FOLD} ${DATA_PREP_ROOT}
-    for x in val${FOLD} train${FOLD}; do
+    mkdir -p data/{train,valid,test}
+    python3 local/data_prep.py ${VGGSOUND}
+    for x in test valid train; do
         for f in text wav.scp utt2spk; do
-            sort ${DATA_PREP_ROOT}/data/${x}/${f} -o ${DATA_PREP_ROOT}/data/${x}/${f}
+            sort data/${x}/${f} -o data/${x}/${f}
         done
-        utils/utt2spk_to_spk2utt.pl ${DATA_PREP_ROOT}/data/${x}/utt2spk > "${DATA_PREP_ROOT}/data/${x}/spk2utt"
-        utils/validate_data_dir.sh --no-feats ${DATA_PREP_ROOT}/data/${x} || exit 1
+        utils/utt2spk_to_spk2utt.pl data/${x}/utt2spk > "data/${x}/spk2utt"
+        utils/validate_data_dir.sh --no-feats data/${x} || exit 1
     done
 fi
 

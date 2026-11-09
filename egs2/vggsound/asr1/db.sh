@@ -230,7 +230,7 @@ CLOTHO_CHATGPT_MIXUP=
 EDACC=downloads
 IPAPACK_PLUS=downloads
 GALAXY=
-
+VGGSOUND=/ocean/projects/cis210027p/jkim48/data/vggsound/scratch/shared/beegfs/hchen/train_data/VGGSound_final/video
 
 # For only CMU TIR environment
 if [[ "$(hostname)" == tir* ]]; then
